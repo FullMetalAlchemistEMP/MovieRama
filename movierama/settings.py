@@ -10,7 +10,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 from decouple import config
 
 SECRET_KEY = config('DJANGO_SECRET_KEY')
-DEBUG = config('DJANGO_DEBUG', cast=bool)
+DEBUG = config('DJANGO_DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = []
 SITE_ID = 1
