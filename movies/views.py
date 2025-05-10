@@ -37,14 +37,28 @@ class MovieListView(ListView):
     model = Movie
     template_name = 'movies/movie_list.html'
     context_object_name = 'movies'
+    paginate_by = 5
 
     def get_queryset(self):
-        user = self.request.user
+        qs = Movie.objects.all()
+        qs = self._annotate_votes(qs)
+        qs = self._annotate_rating(qs)
+        qs = self._annotate_user_vote(qs, self.request.user)
 
-        qs = Movie.objects.annotate(
+        user_id = self.request.GET.get('user_id')
+        if user_id:
+            qs = qs.filter(user_id=user_id)
+
+        qs = self._apply_sorting(qs)
+        return qs
+    def _annotate_votes(self, qs):
+        return qs.annotate(
             likes=Count('votes', filter=Q(votes__vote_type='like')),
             hates=Count('votes', filter=Q(votes__vote_type='hate')),
-        ).annotate(
+        )
+
+    def _annotate_rating(self, qs):
+        return qs.annotate(
             total_votes=F('likes') + F('hates'),
             rating=Case(
                 When(
@@ -66,33 +80,24 @@ class MovieListView(ListView):
             )
         )
 
-        # Annotate user vote if logged in
+    def _annotate_user_vote(self, qs, user):
         if user.is_authenticated:
             vote_subquery = Vote.objects.filter(
                 movie=OuterRef('pk'),
                 user=user
             ).values('vote_type')[:1]
-            qs = qs.annotate(user_vote=Subquery(vote_subquery))
+            return qs.annotate(user_vote=Subquery(vote_subquery))
+        return qs
 
-        # Filter by specific user if provided
-        user_id = self.request.GET.get('user_id')
-        if user_id:
-            qs = qs.filter(user_id=user_id)
-
-        # Sort logic
+    def _apply_sorting(self, qs):
         sort = self.request.GET.get('sort')
         if sort == 'likes':
-            qs = qs.order_by('-likes', '-created_at')
+            return qs.order_by('-likes', '-created_at')
         elif sort == 'hates':
-            qs = qs.order_by('-hates', '-created_at')
+            return qs.order_by('-hates', '-created_at')
         elif sort == 'rating':
-            qs = qs.order_by('-rating', '-created_at')
-        elif sort == 'rating':
-            qs = qs.order_by('-rating', '-created_at')
-        else:
-            qs = qs.order_by('-created_at')
-
-        return qs
+            return qs.order_by('-rating', '-created_at')
+        return qs.order_by('-created_at')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -102,8 +107,8 @@ class MovieListView(ListView):
 
         sort = self.request.GET.get('sort', 'date')
         context['current_sort'] = sort
+        context['movie_count'] = self.get_queryset().count()
         return context
-
 
 class MovieCreateView(LoginRequiredMixin, CreateView):
     model = Movie
