@@ -24,7 +24,9 @@
       <strong>Sorted by: Most Recent</strong>
     {% endif %}
   </p>
-
+  {% if movie_count %}
+    <p>Total movies: {{ movie_count }}</p>
+  {% endif %}
   <p>
       Sort by:
       <a href="?{% if filter_user %}user_id={{ filter_user.id }}&{% endif %}sort=likes"
@@ -39,45 +41,68 @@
   </a> |
   </p>
 
+  {% if is_paginated %}
+    <div class="pagination" style="margin-top: 1em;">
+      {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if filter_user %}&user_id={{ filter_user.id }}{% endif %}">« Previous</a>
+      {% endif %}
 
-  <ul>
-    {% for movie in movies %}
-      <div id="movie-{{ movie.id }}" style="position: relative; border: 1px solid #ccc; padding: 10px; margin-bottom: 15px;">
-        <h3>{{ movie.title }}</h3>
-        <p>Description: {{ movie.description }}</p>
-        <p>By: <a href="?user_id={{ movie.user.id }}">{{ movie.user.username }}</a></p>
-        <p>Posted: {{ movie.created_at }}</p>
-        <p>👍 Likes: {{ movie.likes }} | 👎 Hates: {{ movie.hates }}</p>
+      <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
 
-        {% if user.is_authenticated and movie.user != user %}
-          <form method="post" action="{% url 'vote' %}#movie-{{ movie.id }}">
-            {% csrf_token %}
-            <input type="hidden" name="movie_id" value="{{ movie.id }}">
-            <button name="vote_type" value="like"
-              {% if movie.user_vote == 'like' %}style="font-weight: bold;"{% endif %}>
-              👍 Like
-            </button>
-            <button name="vote_type" value="hate"
-              {% if movie.user_vote == 'hate' %}style="font-weight: bold;"{% endif %}>
-              👎 Hate
-            </button>
-          </form>
-          {% if movie.user_vote %}
-            <p>You {{ movie.user_vote }}d this movie.</p>
-          {% endif %}
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if filter_user %}&user_id={{ filter_user.id }}{% endif %}">Next »</a>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {% for movie in movies %}
+    <div id="movie-{{ movie.id }}" style="position: relative; border: 1px solid #ccc; padding: 10px; margin-bottom: 15px;">
+      <h3>{{ movie.title }}</h3>
+      <p>Description: {{ movie.description }}</p>
+      <p>By: <a href="?user_id={{ movie.user.id }}">{{ movie.user.username }}</a></p>
+      <p>Posted: {{ movie.created_at }}</p>
+      <p>👍 Likes: {{ movie.likes }} | 👎 Hates: {{ movie.hates }}</p>
+
+      {% if user.is_authenticated and movie.user != user %}
+        <form method="post" action="{% url 'vote' %}#movie-{{ movie.id }}">
+          {% csrf_token %}
+          <input type="hidden" name="movie_id" value="{{ movie.id }}">
+          <button style="cursor: pointer;" name="vote_type" value="like"
+            {% if movie.user_vote == 'like' %}style="font-weight: bold;"{% endif %}>
+            👍 Like
+          </button>
+          <button style="cursor: pointer;" name="vote_type" value="hate"
+            {% if movie.user_vote == 'hate' %}style="font-weight: bold;"{% endif %}>
+            👎 Hate
+          </button>
+        </form>
+        {% if movie.user_vote %}
+          <p>You {{ movie.user_vote }}d this movie.</p>
         {% endif %}
+      {% endif %}
 
-        <div style="position: absolute; bottom: 5px; right: 10px; font-size: 0.9em; color: #666;">
-          {% if movie.rating is not None %}
-            ⭐ {{ movie.rating|floatformat:0 }}%
-          {% else %}
-            ⭐ N/A
-          {% endif %}
-        </div>
+      <div style="position: absolute; bottom: 5px; right: 10px; font-size: 0.9em; color: #666;">
+        {% if movie.rating is not None %}
+          ⭐ {{ movie.rating|floatformat:0 }}%
+        {% else %}
+          ⭐ N/A
+        {% endif %}
       </div>
+    </div>
     {% empty %}
       <p>No movies found.</p>
     {% endfor %}
+  {% if is_paginated %}
+    <div class="pagination" style="margin-top: 1em;">
+      {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if filter_user %}&user_id={{ filter_user.id }}{% endif %}">« Previous</a>
+      {% endif %}
 
-  </ul>
+      <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if filter_user %}&user_id={{ filter_user.id }}{% endif %}">Next »</a>
+      {% endif %}
+    </div>
+  {% endif %}
 {% endblock %}
