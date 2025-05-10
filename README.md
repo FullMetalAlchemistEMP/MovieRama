@@ -5,7 +5,7 @@
 ---
 
 ## 🚀 Features
-Core Features:
+### Core Features
 
 - ✅ User sign up, login, and logout
 - ✅ Submit movies (title, description, created date, and owner)
@@ -21,11 +21,16 @@ Core Features:
   - 👎 Hates
   - 🕒 Most recent
 
-Extra:
+### Extras
 
-- ✅ Show sorting and filter status in the UI
-- ✅ Vote status is visible to the user
-- ✅ Page scroll is preserved after voting
+- ✅ Approval rating (% of likes)
+- ✅ Sort by rating
+- ✅ Sorting and filter state shown in the UI
+- ✅ Vote status visible to the user
+- ✅ Pagination with sort/filter support
+- ✅ Demo data auto-population
+- ✅ Health check endpoint for Render
+- ✅ Scroll position preserved after vote actions
 
 ---
 
@@ -36,23 +41,31 @@ Extra:
 
 ### 1. Clone the repo
 ```bash
-git clone https://github.com/YOUR_USERNAME/MovieRama.git
+git clone https://github.com/FullMetalAlchemistEMP/MovieRama.git
 cd MovieRama
 ```
-### 2. Create and activate a virtual environment
+### 2. Create your `.env` file
+
+Copy the example environment file and rename it:
+
+```bash
+cp .env.example .env
+```
+
+### 3. Create and activate a virtual environment
 ```bash
 python -m venv venv
 source venv/bin/activate        # On Windows: venv\Scripts\activate
 ```
-### 3. Install dependencies
+### 4. Install dependencies
 ```bash
 pip install -r requirements.txt
 ```
-### 4. Apply database migrations
+### 5. Apply database migrations
 ```bash
 python manage.py migrate
 ```
-### 5. Start the development server
+### 6. Start the development server
 ```bash
 python manage.py runserver
 ```
