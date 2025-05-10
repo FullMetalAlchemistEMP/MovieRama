@@ -33,23 +33,36 @@ Extra:
 
 
 
-```bash
-### 1. Clone the repo
 
+### 1. Clone the repo
+```bash
 git clone https://github.com/YOUR_USERNAME/MovieRama.git
 cd MovieRama
-
+```
 ### 2. Create and activate a virtual environment
+```bash
 python -m venv venv
 source venv/bin/activate        # On Windows: venv\Scripts\activate
-
+```
 ### 3. Install dependencies
+```bash
 pip install -r requirements.txt
-
+```
 ### 4. Apply database migrations
+```bash
 python manage.py migrate
-
+```
 ### 5. Start the development server
+```bash
 python manage.py runserver
-
+```
 Visit: http://localhost:8000
+
+---
+
+## 🧪 Optional: Populate Demo Data
+
+You can prefill the app with demo users, movies, and votes for quick testing or showcasing:
+```bash
+python manage.py populate_demo
+```

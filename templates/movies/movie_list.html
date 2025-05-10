@@ -5,12 +5,6 @@
 
   {% if user.is_authenticated %}
     <p><a href="{% url 'movie-add' %}">Add a new movie</a></p>
-    <p>{{ user.username }}!
-      <form method="post" action="{% url 'logout' %}">
-        {% csrf_token %}
-        <button type="submit">Logout</button>
-      </form>
-    </p>
   {% else %}
     <p><a href="{% url 'login' %}">Login</a> or <a href="{% url 'signup' %}">Sign up</a> to submit movies.</p>
   {% endif %}
@@ -24,6 +18,8 @@
       <strong>Sorted by: Most Liked</strong>
     {% elif current_sort == 'hates' %}
       <strong>Sorted by: Most Hated</strong>
+    {% elif current_sort == 'rating' %}
+      <strong>Sorted by: Best Rating</strong>
     {% else %}
       <strong>Sorted by: Most Recent</strong>
     {% endif %}
@@ -37,12 +33,16 @@
          {% if current_sort == 'hates' %}style="font-weight: bold;"{% endif %}>👎 Most Hated</a> |
       <a href="?{% if filter_user %}user_id={{ filter_user.id }}&{% endif %}sort=date"
          {% if current_sort == 'date' or not current_sort %}style="font-weight: bold;"{% endif %}>🕒 Most Recent</a>
+      <a href="?{% if filter_user %}user_id={{ filter_user.id }}&{% endif %}sort=rating"
+         {% if current_sort == 'rating' %}style="font-weight: bold;"{% endif %}>
+       ⭐ Approval Rating
+  </a> |
   </p>
 
 
   <ul>
     {% for movie in movies %}
-      <div id="movie-{{ movie.id }}" style="border: 1px solid #ccc; padding: 10px; margin-bottom: 15px;">
+      <div id="movie-{{ movie.id }}" style="position: relative; border: 1px solid #ccc; padding: 10px; margin-bottom: 15px;">
         <h3>{{ movie.title }}</h3>
         <p>Description: {{ movie.description }}</p>
         <p>By: <a href="?user_id={{ movie.user.id }}">{{ movie.user.username }}</a></p>
@@ -66,9 +66,18 @@
             <p>You {{ movie.user_vote }}d this movie.</p>
           {% endif %}
         {% endif %}
+
+        <div style="position: absolute; bottom: 5px; right: 10px; font-size: 0.9em; color: #666;">
+          {% if movie.rating is not None %}
+            ⭐ {{ movie.rating|floatformat:0 }}%
+          {% else %}
+            ⭐ N/A
+          {% endif %}
+        </div>
       </div>
     {% empty %}
       <p>No movies found.</p>
     {% endfor %}
+
   </ul>
 {% endblock %}

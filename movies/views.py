@@ -18,9 +18,8 @@ from django.views.decorators.http import require_POST
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.decorators import login_required
 
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Case, When, Value, F, FloatField, ExpressionWrapper
 from django.db.models import OuterRef, Subquery
-
 
 def signup(request):
     if request.method == "POST":
@@ -41,9 +40,30 @@ class MovieListView(ListView):
 
     def get_queryset(self):
         user = self.request.user
+
         qs = Movie.objects.annotate(
             likes=Count('votes', filter=Q(votes__vote_type='like')),
             hates=Count('votes', filter=Q(votes__vote_type='hate')),
+        ).annotate(
+            total_votes=F('likes') + F('hates'),
+            rating=Case(
+                When(
+                    likes__gt=0,
+                    then=ExpressionWrapper(
+                        (F('likes') * 100.0) / (F('likes') + F('hates')),
+                        output_field=FloatField()
+                    )
+                ),
+                When(
+                    hates__gt=0,
+                    then=ExpressionWrapper(
+                        (F('likes') * 100.0) / (F('likes') + F('hates')),
+                        output_field=FloatField()
+                    )
+                ),
+                default=Value(None),
+                output_field=FloatField()
+            )
         )
 
         # Annotate user vote if logged in
@@ -54,15 +74,21 @@ class MovieListView(ListView):
             ).values('vote_type')[:1]
             qs = qs.annotate(user_vote=Subquery(vote_subquery))
 
+        # Filter by specific user if provided
         user_id = self.request.GET.get('user_id')
         if user_id:
             qs = qs.filter(user_id=user_id)
 
+        # Sort logic
         sort = self.request.GET.get('sort')
         if sort == 'likes':
             qs = qs.order_by('-likes', '-created_at')
         elif sort == 'hates':
             qs = qs.order_by('-hates', '-created_at')
+        elif sort == 'rating':
+            qs = qs.order_by('-rating', '-created_at')
+        elif sort == 'rating':
+            qs = qs.order_by('-rating', '-created_at')
         else:
             qs = qs.order_by('-created_at')
 
