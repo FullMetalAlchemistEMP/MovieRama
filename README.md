@@ -66,3 +66,16 @@ You can prefill the app with demo users, movies, and votes for quick testing or 
 ```bash
 python manage.py populate_demo
 ```
+
+## 🧪 Running Tests
+
+To run tests:
+
+```bash
+python manage.py test movies
+```
+
+## 🔗 Live Demo
+
+You can try the app live at:  
+👉 [https://movierama-95ih.onrender.com](https://movierama-95ih.onrender.com)
