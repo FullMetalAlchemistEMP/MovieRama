@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h2>Movie List</h2>
+
+  {% if user.is_authenticated %}
+    <p><a href="{% url 'movie-add' %}">Add a new movie</a></p>
+    <p>{{ user.username }}!
+      <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit">Logout</button>
+      </form>
+    </p>
+  {% else %}
+    <p><a href="{% url 'login' %}">Login</a> or <a href="{% url 'signup' %}">Sign up</a> to submit movies.</p>
+  {% endif %}
+
+  {% if filter_user %}
+    <h3>Showing movies by {{ filter_user.username }}</h3>
+    <p><a href="{% url 'movie-list-view' %}">🔙 Show all movies</a></p>
+  {% endif %}
+  <p>
+    {% if current_sort == 'likes' %}
+      <strong>Sorted by: Most Liked</strong>
+    {% elif current_sort == 'hates' %}
+      <strong>Sorted by: Most Hated</strong>
+    {% else %}
+      <strong>Sorted by: Most Recent</strong>
+    {% endif %}
+  </p>
+
+  <p>
+      Sort by:
+      <a href="?{% if filter_user %}user_id={{ filter_user.id }}&{% endif %}sort=likes"
+         {% if current_sort == 'likes' %}style="font-weight: bold;"{% endif %}>👍 Most Liked</a> |
+      <a href="?{% if filter_user %}user_id={{ filter_user.id }}&{% endif %}sort=hates"
+         {% if current_sort == 'hates' %}style="font-weight: bold;"{% endif %}>👎 Most Hated</a> |
+      <a href="?{% if filter_user %}user_id={{ filter_user.id }}&{% endif %}sort=date"
+         {% if current_sort == 'date' or not current_sort %}style="font-weight: bold;"{% endif %}>🕒 Most Recent</a>
+  </p>
+
+
+  <ul>
+    {% for movie in movies %}
+      <div id="movie-{{ movie.id }}" style="border: 1px solid #ccc; padding: 10px; margin-bottom: 15px;">
+        <h3>{{ movie.title }}</h3>
+        <p>Description: {{ movie.description }}</p>
+        <p>By: <a href="?user_id={{ movie.user.id }}">{{ movie.user.username }}</a></p>
+        <p>Posted: {{ movie.created_at }}</p>
+        <p>👍 Likes: {{ movie.likes }} | 👎 Hates: {{ movie.hates }}</p>
+
+        {% if user.is_authenticated and movie.user != user %}
+          <form method="post" action="{% url 'vote' %}#movie-{{ movie.id }}">
+            {% csrf_token %}
+            <input type="hidden" name="movie_id" value="{{ movie.id }}">
+            <button name="vote_type" value="like"
+              {% if movie.user_vote == 'like' %}style="font-weight: bold;"{% endif %}>
+              👍 Like
+            </button>
+            <button name="vote_type" value="hate"
+              {% if movie.user_vote == 'hate' %}style="font-weight: bold;"{% endif %}>
+              👎 Hate
+            </button>
+          </form>
+          {% if movie.user_vote %}
+            <p>You {{ movie.user_vote }}d this movie.</p>
+          {% endif %}
+        {% endif %}
+      </div>
+    {% empty %}
+      <p>No movies found.</p>
+    {% endfor %}
+  </ul>
+{% endblock %}
