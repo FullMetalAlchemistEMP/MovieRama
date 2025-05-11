@@ -23,9 +23,3 @@ class MovieSerializer(serializers.ModelSerializer):
 
     def get_hates(self, obj):
         return obj.votes.filter(vote_type="hate").count()
-
-
-class VoteSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Vote
-        fields = ["id", "user", "movie", "vote_type", "created_at"]
