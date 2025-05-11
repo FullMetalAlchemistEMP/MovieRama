@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Movie, Vote
+from .models import Movie
 from django.contrib.auth.models import User
 
 
@@ -23,9 +23,3 @@ class MovieSerializer(serializers.ModelSerializer):
 
     def get_hates(self, obj):
         return obj.votes.filter(vote_type="hate").count()
-
-
-class VoteSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Vote
-        fields = ["id", "user", "movie", "vote_type", "created_at"]

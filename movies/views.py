@@ -1,25 +1,28 @@
-from django.shortcuts import render, redirect
-from django.contrib.auth.forms import UserCreationForm
-from django.views.generic import ListView, CreateView
+# Standard
+from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
 
-from rest_framework import viewsets, permissions
-from .models import Movie, Vote
-from .serializers import MovieSerializer, VoteSerializer
-from rest_framework.exceptions import PermissionDenied
-
+# Django
+from django.views.generic import ListView, CreateView
+from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.models import User
-from rest_framework import generics
-from .serializers import UserSerializer
-from rest_framework.permissions import AllowAny
-
-from django.views.decorators.http import require_POST
-from django.shortcuts import get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from django.views.decorators.http import require_POST
 
-from django.db.models import Count, Q, Case, When, Value, F, FloatField, ExpressionWrapper
-from django.db.models import OuterRef, Subquery
+# Django ORM
+from django.db.models import Count, Q, Case, When, Value, F
+from django.db.models import FloatField, ExpressionWrapper, OuterRef, Subquery
+
+# DRF
+from rest_framework import viewsets, permissions
+
+# App
+from .models import Movie, Vote
+from .serializers import MovieSerializer
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def signup(request):
@@ -27,6 +30,7 @@ def signup(request):
         form = UserCreationForm(request.POST)
         if form.is_valid():
             form.save()
+            logger.info(f"New user registered: {form.cleaned_data.get('username')}")
             return redirect("login")
     else:
         form = UserCreationForm()
@@ -35,12 +39,16 @@ def signup(request):
 
 
 class MovieListView(ListView):
+    """Displays the list of movies with voting stats and filtering/sorting options."""
+
     model = Movie
     template_name = "movies/movie_list.html"
     context_object_name = "movies"
     paginate_by = 5
 
     def get_queryset(self):
+        """Returns the annotated queryset of movies with sorting and filtering."""
+
         qs = Movie.objects.all()
         qs = self._annotate_votes(qs)
         qs = self._annotate_rating(qs)
@@ -54,12 +62,16 @@ class MovieListView(ListView):
         return qs
 
     def _annotate_votes(self, qs):
+        """Annotates like and hate counts per movie."""
+
         return qs.annotate(
             likes=Count("votes", filter=Q(votes__vote_type="like")),
             hates=Count("votes", filter=Q(votes__vote_type="hate")),
         )
 
     def _annotate_rating(self, qs):
+        """Calculates approval rating based on likes and hates."""
+
         return qs.annotate(
             total_votes=F("likes") + F("hates"),
             rating=Case(
@@ -81,6 +93,8 @@ class MovieListView(ListView):
         )
 
     def _annotate_user_vote(self, qs, user):
+        """Adds the current user's vote type (like/hate) to each movie."""
+
         if user.is_authenticated:
             vote_subquery = Vote.objects.filter(movie=OuterRef("pk"), user=user).values(
                 "vote_type"
@@ -89,6 +103,8 @@ class MovieListView(ListView):
         return qs
 
     def _apply_sorting(self, qs):
+        """Sorts movies based on query parameter."""
+
         sort = self.request.GET.get("sort")
         if sort == "likes":
             return qs.order_by("-likes", "-created_at")
@@ -99,14 +115,14 @@ class MovieListView(ListView):
         return qs.order_by("-created_at")
 
     def get_context_data(self, **kwargs):
+        """Adds extra context such as filter user, sort method, and movie count."""
+
         context = super().get_context_data(**kwargs)
         user_id = self.request.GET.get("user_id")
         if user_id:
             context["filter_user"] = User.objects.filter(id=user_id).first()
-
-        sort = self.request.GET.get("sort", "date")
-        context["current_sort"] = sort
-        context["movie_count"] = self.get_queryset().count()
+        context["current_sort"] = self.request.GET.get("sort", "date")
+        context["movie_count"] = context["paginator"].count if context.get("paginator") else 0
         return context
 
 
@@ -119,13 +135,8 @@ class MovieCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.user = self.request.user
+        logger.info(f"User {self.request.user.username} created movie: {form.instance.title}")
         return super().form_valid(form)
-
-
-class UserCreateView(generics.CreateAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    permission_classes = [AllowAny]
 
 
 class MovieViewSet(viewsets.ModelViewSet):
@@ -141,29 +152,11 @@ class MovieViewSet(viewsets.ModelViewSet):
         serializer.save(user=self.request.user)
 
 
-class VoteViewSet(viewsets.ModelViewSet):
-    serializer_class = VoteSerializer
-    # Only authenticated users can access this viewset
-    permission_classes = [permissions.IsAuthenticated]
-    http_method_names = ["get", "post"]
-
-    def get_queryset(self):
-        # Only return votes by the currently authenticated user
-        return Vote.objects.filter(user=self.request.user)
-
-    def perform_create(self, serializer):
-        # Prevent users from voting on their own movies
-        movie = serializer.validated_data["movie"]
-
-        if movie.user == self.request.user:
-            raise PermissionDenied("You cannot vote on your own movie.")
-
-        serializer.save(user=self.request.user)
-
-
 @require_POST
 @login_required
 def vote_view(request):
+    """Handles likes and hates submitted via form buttons in the HTML UI."""
+
     movie = get_object_or_404(Movie, id=request.POST["movie_id"])
 
     if movie.user == request.user:
@@ -175,10 +168,15 @@ def vote_view(request):
     if existing_vote:
         if existing_vote.vote_type == vote_type:
             existing_vote.delete()  # Retract vote
+            logger.info(f"User {request.user.username} retracted vote on movie ID {movie.id}")
         else:
             existing_vote.vote_type = vote_type  # Switch vote
             existing_vote.save()
+            logger.info(
+                f"User {request.user.username} switched vote to '{vote_type}' on movie ID {movie.id}"
+            )
     else:
         Vote.objects.create(user=request.user, movie=movie, vote_type=vote_type)
+        logger.info(f"User {request.user.username} voted '{vote_type}' on movie ID {movie.id}")
 
     return redirect(request.META.get("HTTP_REFERER", "movie-list-view"))

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
-from rest_framework.authtoken.views import obtain_auth_token
 from django.http import HttpResponse
+from rest_framework.authtoken.views import obtain_auth_token
 
 
 def health_check(request):
